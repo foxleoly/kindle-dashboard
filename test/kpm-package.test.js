@@ -25,3 +25,12 @@ test('KPM hooks and payload scripts are POSIX-shell parseable', () => {
     execFileSync('sh', ['-n', path.join(pkg, file)]);
   }
 });
+
+test('default configuration has no real endpoint or credentials', () => {
+  const env = fs.readFileSync(path.join(pkg, 'payload/dashboard.env'), 'utf8');
+  assert.match(env, /^DASHBOARD_URL='http:\/\/<PC_IP>:8787\/dash\.png'$/m);
+  assert.match(env, /^INTERVAL='45'$/m);
+  assert.match(env, /^FULL_EVERY='20'$/m);
+  assert.match(env, /^WIFI_RETRY_EVERY='3'$/m);
+  assert.doesNotMatch(env, /(?:password|token|cookie|192\.168\.)/i);
+});
