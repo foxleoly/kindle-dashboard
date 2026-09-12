@@ -36,15 +36,18 @@ From the project root, create the artifact:
 npm run package:kpm
 ```
 
-The command writes this ignored local artifact:
+The command creates this ignored static repository directory:
 
 ```text
-release/kindle-dashboard_1.0.0_kindlepw2.kpkg
+release/kpm-repository/
+├── manifest.json
+└── packages/kindle-dashboard/artifacts/
+    └── kindle-dashboard_1.0.0_kindlepw2.kpkg
 ```
 
-Publish the artifact and its KPM repository `manifest.json` to an
-owner-controlled HTTPS location. Do not publish a configuration file containing
-a real endpoint, credential, token, cookie, serial number, or private log.
+Publish the contents of `release/kpm-repository/` to an owner-controlled HTTPS
+location. Do not publish a configuration file containing a real endpoint,
+credential, token, cookie, serial number, or private log.
 
 ## Install with KPM
 

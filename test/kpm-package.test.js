@@ -64,6 +64,17 @@ test('package helper produces an archive with only package-root paths', () => {
   assert.ok(entries.every((entry) => !entry.startsWith('/') && !entry.includes('../')));
 });
 
+test('package helper creates a publishable KPM repository manifest', () => {
+  const repository = path.join(root, 'release', 'kpm-repository');
+  fs.rmSync(repository, { recursive: true, force: true });
+  execFileSync(process.execPath, ['scripts/package-kpm.js'], { cwd: root });
+  const manifest = JSON.parse(fs.readFileSync(path.join(repository, 'manifest.json'), 'utf8'));
+  const artifact = manifest.packages['kindle-dashboard'].artifacts[0];
+  assert.equal(manifest.manifest_version, 2);
+  assert.equal(artifact.url, 'packages/kindle-dashboard/artifacts/kindle-dashboard_1.0.0_kindlepw2.kpkg');
+  assert.ok(fs.existsSync(path.join(repository, artifact.url)));
+});
+
 test('KPM documentation does not instruct rootfs or SSH installation', () => {
   const guide = fs.readFileSync(path.join(root, 'KINDLE-INSTALLATION.md'), 'utf8');
   assert.match(guide, /kpm add-repo https:\/\/<PACKAGE_REPOSITORY>\/manifest\.json/);
