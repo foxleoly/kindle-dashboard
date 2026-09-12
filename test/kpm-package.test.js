@@ -34,3 +34,13 @@ test('default configuration has no real endpoint or credentials', () => {
   assert.match(env, /^WIFI_RETRY_EVERY='3'$/m);
   assert.doesNotMatch(env, /(?:password|token|cookie|192\.168\.)/i);
 });
+
+test('payload uses only the dedicated user-storage directory', () => {
+  const source = [
+    'payload/dash-loop.sh', 'payload/dash-launch.sh', 'launch.sh',
+  ].map((file) => fs.readFileSync(path.join(pkg, file), 'utf8')).join('\n');
+  assert.match(source, /\/mnt\/us\/kindle-dashboard/);
+  assert.match(source, /\/mnt\/us\/libkh\/bin\/fbink/);
+  assert.match(source, /DASHBOARD_URL/);
+  assert.doesNotMatch(source, /\/etc\/upstart|mntroot|\bssh\b|USBNetwork/i);
+});

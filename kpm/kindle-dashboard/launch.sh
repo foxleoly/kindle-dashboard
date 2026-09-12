@@ -1,2 +1,3 @@
 #!/bin/sh
-# Implemented by the launch-hook task.
+
+exec sh /mnt/us/kindle-dashboard/dash-launch.sh
