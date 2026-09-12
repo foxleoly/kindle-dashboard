@@ -44,3 +44,13 @@ test('payload uses only the dedicated user-storage directory', () => {
   assert.match(source, /DASHBOARD_URL/);
   assert.doesNotMatch(source, /\/etc\/upstart|mntroot|\bssh\b|USBNetwork/i);
 });
+
+test('hooks preserve configuration on upgrades and avoid rootfs', () => {
+  const install = fs.readFileSync(path.join(pkg, 'install.sh'), 'utf8');
+  const uninstall = fs.readFileSync(path.join(pkg, 'uninstall.sh'), 'utf8');
+  const scriptlet = fs.readFileSync(path.join(pkg, 'scriptlets/kindle-dashboard.sh'), 'utf8');
+  assert.match(install, /\[ ! -f "\$ENV_FILE" \]/);
+  assert.match(uninstall, /if \[ "\$1" = upgrade \]; then[\s\S]*exit 0/);
+  assert.match(scriptlet, /\/var\/local\/kmc\/bin\/kpm launch kindle-dashboard/);
+  assert.doesNotMatch(`${install}\n${uninstall}`, /\/etc\/|mntroot|rm -rf \/mnt\/us(?:\s|$)/);
+});

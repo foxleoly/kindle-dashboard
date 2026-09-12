@@ -1,2 +1,3 @@
 #!/bin/sh
-# Implemented by the scriptlet task.
+
+exec /var/local/kmc/bin/kpm launch kindle-dashboard
