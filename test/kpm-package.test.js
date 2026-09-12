@@ -63,3 +63,12 @@ test('package helper produces an archive with only package-root paths', () => {
   assert.ok(entries.includes('./manifest.json'));
   assert.ok(entries.every((entry) => !entry.startsWith('/') && !entry.includes('../')));
 });
+
+test('KPM documentation does not instruct rootfs or SSH installation', () => {
+  const guide = fs.readFileSync(path.join(root, 'KINDLE-INSTALLATION.md'), 'utf8');
+  assert.match(guide, /kpm add-repo https:\/\/<PACKAGE_REPOSITORY>\/manifest\.json/);
+  assert.match(guide, /kpm update/);
+  assert.match(guide, /kpm install kindle-dashboard/);
+  assert.match(guide, /does not start automatically after a reboot/i);
+  assert.doesNotMatch(guide, /mntroot|\/etc\/upstart|SSH Password|USBNetwork/);
+});

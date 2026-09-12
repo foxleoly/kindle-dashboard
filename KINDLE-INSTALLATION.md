@@ -1,241 +1,136 @@
-# Kindle Installation
+# Kindle Dashboard KPM Installation
 
-Kindle-side guide for Kindle Dashboard. Use it after the device already has a
-working jailbreak, SSH, and FBInk.
+This guide installs the Kindle Dashboard through the Kindle Package Manager
+(KPM). It requires an already jailbroken Kindle with KPM and FBInk available.
+It does not jailbreak the device, modify the system partition, or require SSH.
 
-This project does not jailbreak the Kindle, install FBInk, or remove jailbreak
-components. It only validates a prepared device, uploads dashboard scripts, and
-registers a reversible startup job.
+## What the Package Does
 
-## Overview
-
-The PC renders `dash.png` and serves it at:
-
-```text
-http://<IP_PC>:8787/dash.png
-```
-
-The Kindle runs a local loop that:
-
-1. downloads that PNG on the local network;
-2. saves the image to `/mnt/us/dash.png`;
-3. draws the image on screen with FBInk;
-4. repeats on the configured interval.
-
-## Prerequisites
-
-On the Kindle:
-
-- jailbreak already completed;
-- SSH enabled and reachable on the local network;
-- FBInk installed;
-- `/mnt/us` available;
-- `initctl` available;
-- `mntroot` available;
-- expected hotfix/Upstart present at `/etc/upstart/kmc.conf`.
-
-On the PC:
-
-- Kindle Dashboard installed or running in development;
-- PC and Kindle on the same Wi-Fi network;
-- port `8787` reachable from the Kindle;
-- setup completed in the Electron UI.
-
-## UI Configuration
-
-Open **Kindle > Configuration** in the app and fill in:
-
-| Field | Value |
-| --- | --- |
-| Kindle IP | `<IP_KINDLE>` |
-| SSH Port | usually `22` |
-| SSH User | `<SSH_USER>` |
-| SSH Password | `<SSH_PASSWORD>` |
-| PC IP | `<IP_PC>` |
-| Kindle Download | seconds between PNG downloads |
-| Full Refresh | cycles between full anti-ghosting refreshes |
-| Wi-Fi Retry | consecutive failures before Wi-Fi recovery |
-
-The UI builds the final PNG URL as:
-
-```text
-http://<IP_PC>:8787/dash.png
-```
-
-The SSH password is saved locally in Electron `userData` and uses `safeStorage`
-when available. The renderer does not receive the password as plain text.
-
-## Recommended Flow
-
-Use the Electron UI for the normal flow:
-
-1. **Save** Kindle configuration.
-2. **Check Kindle** to validate SSH, jailbreak, FBInk, hotfix, and required commands.
-3. **Install scripts** to copy files and register autostart.
-4. **Start script** or **Stop script** to control the loop without removing autostart.
-5. **Uninstall** to remove dashboard autostart and launcher files.
-
-The `npm run kindle` and `npm run kindle:autostart` commands exist for support
-and local diagnostics. For normal use, prefer the UI so state and configuration
-stay in one place.
-
-## Installed Files
-
-During **Install scripts**, the app uploads or creates:
+The package installs these user-storage paths only:
 
 | Kindle path | Purpose |
 | --- | --- |
-| `/mnt/us/dash-loop.sh` | Downloads the PNG from the PC and displays it with FBInk in a loop. |
-| `/mnt/us/dash-autostart.sh` | Waits for Wi-Fi and starts the loop. |
-| `/mnt/us/dash-autostart.env` | Stores the PNG URL and dashboard intervals. |
-| `/mnt/us/kindle-dashboard.conf` | Removable copy of the Upstart job. |
-| `/etc/upstart/kindle-dashboard.conf` | Upstart job that calls the launcher on boot. |
+| `/mnt/us/kindle-dashboard/dashboard.env` | User-editable dashboard endpoint and refresh settings. |
+| `/mnt/us/kindle-dashboard/dash-launch.sh` | Validates configuration and Wi-Fi before starting the loop. |
+| `/mnt/us/kindle-dashboard/dash-loop.sh` | Downloads and draws the PNG with FBInk. |
+| `/mnt/us/kindle-dashboard/logs/` | Dedicated runtime logs. |
+| `/mnt/us/documents/kindle-dashboard.sh` | Document scriptlet that launches the package through KPM. |
 
-The installer only replaces `/etc/upstart/kindle-dashboard.conf` when the
-existing file belongs to Kindle Dashboard. If an unknown job already exists at
-the same path, installation fails instead of overwriting it.
+The package uses `/mnt/us/libkh/bin/fbink` when available and falls back to
+`/usr/bin/fbink`. It does not create an Upstart job. The dashboard does not start automatically after a reboot; launch it again from KPM or the document scriptlet.
 
-To write into `/etc/upstart`, the installer remounts the root filesystem as
-`rw`, copies the job, reloads Upstart, and tries to return the root filesystem
-to `ro`.
+## Prerequisites
 
-## Dashboard Environment
+- A Kindle with its jailbreak already completed.
+- KPM installed and opening successfully.
+- FBInk available at `/mnt/us/libkh/bin/fbink` or `/usr/bin/fbink`.
+- Kindle and dashboard PC on the same Wi-Fi network.
+- A static HTTPS repository that serves the KPM `manifest.json` and the
+  generated `.kpkg` artifact.
 
-`/mnt/us/dash-autostart.env` contains the configuration used by the launcher:
+## Build the Package
+
+From the project root, create the artifact:
 
 ```sh
-PC='http://<IP_PC>:8787/dash.png'
+npm run package:kpm
+```
+
+The command writes this ignored local artifact:
+
+```text
+release/kindle-dashboard_1.0.0_kindlepw2.kpkg
+```
+
+Publish the artifact and its KPM repository `manifest.json` to an
+owner-controlled HTTPS location. Do not publish a configuration file containing
+a real endpoint, credential, token, cookie, serial number, or private log.
+
+## Install with KPM
+
+In a Kindle shell or through the corresponding KPM interface, add the package
+repository, refresh the package index, and install the package:
+
+```sh
+kpm add-repo https://<PACKAGE_REPOSITORY>/manifest.json
+kpm update
+kpm install kindle-dashboard
+```
+
+KPM runs the package `install.sh` from its unpacked package directory. On an
+upgrade, it runs `uninstall.sh upgrade` before installing the new version; the
+package preserves `dashboard.env` during that path.
+
+## Configure and Launch
+
+After KPM installs the package, connect over USB and edit:
+
+```text
+/mnt/us/kindle-dashboard/dashboard.env
+```
+
+Set the endpoint and refresh intervals with placeholder-safe values:
+
+```sh
+DASHBOARD_URL='http://<PC_IP>:8787/dash.png'
 INTERVAL='45'
 FULL_EVERY='20'
 WIFI_RETRY_EVERY='3'
+MAX_FAILURES='6'
 ```
 
-Fields:
+Do not leave `<PC_IP>` in place. Do not add credentials to this file.
 
-- `PC`: required URL for the PNG served by the PC.
-- `INTERVAL`: seconds between downloads.
-- `FULL_EVERY`: how many cycles between full refreshes.
-- `WIFI_RETRY_EVERY`: consecutive failures before Wi-Fi reconnect attempt.
-
-If `PC` is empty, the loop exits with an error. It does not fall back to an old
-IP address.
-
-## Boot Behavior
-
-The `/etc/upstart/kindle-dashboard.conf` job runs when the Kindle framework is
-ready. It calls:
+Launch manually with either method:
 
 ```sh
-/mnt/us/dash-autostart.sh
+kpm launch kindle-dashboard
 ```
 
-The launcher:
+Or open `kindle-dashboard.sh` from the Kindle documents list. The launcher
+waits up to 90 seconds for Wi-Fi. If the configuration is valid, it starts one
+background loop and writes logs under:
 
-- does not start if `/mnt/us/dash-autostart.disabled` exists;
-- loads `/mnt/us/dash-autostart.env`;
-- validates that `PC` is configured;
-- waits up to 60 seconds for `/mnt/us/dash-loop.sh`;
-- waits up to 90 seconds for Wi-Fi to become `CONNECTED`;
-- removes `/mnt/us/dash-loop.stop`;
-- starts `dash-loop.sh` in the background;
-- writes logs to `/mnt/us/dash-autostart.log`.
+```text
+/mnt/us/kindle-dashboard/logs/
+```
 
-## Loop Behavior
+The loop downloads the PNG to a temporary file, checks that it is nonempty,
+then atomically replaces the displayed image. It exits after the configured
+maximum number of consecutive failures.
 
-`dash-loop.sh`:
+## Reboot Behavior
 
-- keeps the screen awake through `lipc-set-prop com.lab126.powerd preventScreenSaver 1`;
-- downloads the PNG to `/mnt/us/dash.png.tmp`;
-- moves it to `/mnt/us/dash.png` only when the download has content;
-- uses `fbink -g file=/mnt/us/dash.png -W GC16`;
-- performs periodic full refreshes with `fbink -f -c`;
-- logs download failures to `/mnt/us/dash-loop.log`;
-- tries to recover Wi-Fi after repeated failures;
-- uses `/mnt/us/dash-loop.pid` to avoid duplicate instances;
-- stops when `/mnt/us/dash-loop.stop` exists.
-
-## Expected Status
-
-After installation, the UI shows the script's public state:
-
-| Field | Meaning |
-| --- | --- |
-| Autostart | Upstart job installed or missing |
-| Enabled | autostart enabled or disabled by `.disabled` file |
-| Upstart | state reported by `initctl` |
-| Loop | process running or stopped |
-| Backend | PC reachable through `/api/ping` |
-
-If `Backend` is unavailable, check:
-
-- PC and Kindle are on the same network;
-- app is open or running in the background;
-- port `8787` is allowed by the firewall;
-- URL `http://<IP_PC>:8787/dash.png` is reachable from the Kindle;
-- PC IP is up to date in configuration.
-
-## Start and Stop Without Uninstalling
-
-**Stop script**:
-
-- creates `/mnt/us/dash-autostart.disabled`;
-- creates `/mnt/us/dash-loop.stop`;
-- terminates the pidfile process if it is running;
-- keeps installed files available for later reactivation.
-
-**Start script**:
-
-- removes `/mnt/us/dash-autostart.disabled`;
-- calls `/mnt/us/dash-autostart.sh`;
-- restarts the loop if configuration and Wi-Fi are OK.
+KPM package hooks must not write to or remount the system partition. For that
+reason, this package intentionally has no boot integration. After a reboot,
+run `kpm launch kindle-dashboard` again or open the document scriptlet.
 
 ## Uninstall
 
-In the UI, use **Uninstall** under **Kindle > Diagnostics and Installation**.
-
-This:
-
-- stops the loop;
-- removes `/etc/upstart/kindle-dashboard.conf` if it is the Kindle Dashboard job;
-- reloads Upstart configuration;
-- removes `/mnt/us/dash-autostart.sh`;
-- removes `/mnt/us/kindle-dashboard.conf`;
-- removes `/mnt/us/dash-autostart.disabled`.
-
-Runtime files may remain for auditing or manual cleanup.
-
-## Optional Manual Cleanup
-
-After uninstalling and confirming the job was removed, you can clean runtime
-files directly on the Kindle:
+Stop and remove the package through KPM:
 
 ```sh
-rm -f /mnt/us/dash-loop.sh \
-      /mnt/us/dash-loop.pid \
-      /mnt/us/dash-loop.log \
-      /mnt/us/dash-loop.stop \
-      /mnt/us/dash-autostart.log \
-      /mnt/us/dash-autostart.env \
-      /mnt/us/dash.png
+kpm uninstall kindle-dashboard
 ```
 
-This cleanup removes only Kindle Dashboard files. Do not remove jailbreak,
-FBInk, KUAL, USBNetwork, or hotfix files through this project.
+The package signals the tracked dashboard loop to stop, removes its document
+scriptlet only if it still matches the package version, and removes only
+`/mnt/us/kindle-dashboard`. It does not remove KPM, WinterBreak, FBInk,
+unrelated documents, or jailbreak components.
+
+## Troubleshooting
+
+- **FBInk unavailable:** Confirm that one of the two documented FBInk paths is
+  executable before installation.
+- **Configuration rejected:** Replace the `<PC_IP>` placeholder with the
+  dashboard PC address, then launch the package again.
+- **Wi-Fi timeout:** Connect the Kindle to the same network as the dashboard
+  PC, then launch again.
+- **PNG download failures:** Check that the PC dashboard is running and that
+  `http://<PC_IP>:8787/dash.png` is reachable from the Kindle network.
 
 ## Privacy
 
-Do not put these in this file:
-
-- Kindle serial number;
-- real PC or Kindle IP;
-- real username;
-- SSH password;
-- tokens, cookies, local databases, or session files;
-- private logs.
-
-Always use placeholders:
-
-- `<IP_PC>`
-- `<IP_KINDLE>`
-- `<SSH_USER>`
-- `<SSH_PASSWORD>`
+Keep real addresses, usernames, passwords, tokens, cookies, serial numbers,
+local databases, session files, generated PNGs, and logs out of commits and
+published package repositories. Use placeholders in all shared examples.

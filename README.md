@@ -10,6 +10,9 @@ downloads that image on the local network and draws it on screen with FBInk.
 This project does not jailbreak the Kindle. It assumes the device is already
 prepared, with SSH and FBInk working.
 
+For the KPM-native, user-space package route that avoids SSH and system
+partition writes, follow [KINDLE-INSTALLATION.md](KINDLE-INSTALLATION.md).
+
 ## Key Features
 
 - AI usage dashboard for Claude Code and OpenAI Codex.
@@ -172,6 +175,7 @@ npm run build              # typecheck + Electron build
 npm run build:win          # generates Windows installer
 npm run typecheck          # validates TypeScript
 npm test                   # runs Node tests
+npm run package:kpm         # creates the local KPM package artifact
 npm run backend            # legacy standalone backend
 npm run supervisor         # legacy standalone supervisor
 npm run autostart:install  # registers Windows autostart
