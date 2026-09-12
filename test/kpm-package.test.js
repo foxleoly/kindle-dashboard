@@ -54,3 +54,12 @@ test('hooks preserve configuration on upgrades and avoid rootfs', () => {
   assert.match(scriptlet, /\/var\/local\/kmc\/bin\/kpm launch kindle-dashboard/);
   assert.doesNotMatch(`${install}\n${uninstall}`, /\/etc\/|mntroot|rm -rf \/mnt\/us(?:\s|$)/);
 });
+
+test('package helper produces an archive with only package-root paths', () => {
+  const artifact = path.join(root, 'release', 'kindle-dashboard_1.0.0_kindlepw2.kpkg');
+  fs.rmSync(artifact, { force: true });
+  execFileSync(process.execPath, ['scripts/package-kpm.js'], { cwd: root });
+  const entries = execFileSync('tar', ['-tzf', artifact], { encoding: 'utf8' }).trim().split('\n');
+  assert.ok(entries.includes('./manifest.json'));
+  assert.ok(entries.every((entry) => !entry.startsWith('/') && !entry.includes('../')));
+});

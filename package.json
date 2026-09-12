@@ -21,6 +21,7 @@
     "supervisor": "node scripts/supervisor.js",
     "kindle": "node scripts/kssh.js",
     "kindle:autostart": "node scripts/kindle-autostart.js",
+    "package:kpm": "node scripts/package-kpm.js",
     "test": "node --test",
     "test:coverage": "node --test --experimental-test-coverage",
     "autostart:install": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/windows-autostart.ps1 Install",
