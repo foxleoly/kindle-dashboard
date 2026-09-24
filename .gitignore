@@ -4,8 +4,16 @@ out/*
 !out/.gitkeep
 dist/
 release/
+backups/
 .env
 .env.*
 !.env.example
 *.log
 *.pid
+config.json
+*.db
+*.sqlite*
+*.pem
+*.key
+*.p12
+*.pfx
